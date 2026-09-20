@@ -1,6 +1,7 @@
 import os
 
 import discord
+from discord import app_commands
 from discord.ext import commands
 from dotenv import load_dotenv
 
@@ -69,6 +70,25 @@ async def on_ready() -> None:
             name="ดูแลเซิร์ฟเวอร์ AFT.SBTVC",
         ),
     )
+
+
+@bot.tree.error
+async def on_app_command_error(
+    interaction: discord.Interaction,
+    error: app_commands.AppCommandError,
+) -> None:
+    if isinstance(error, app_commands.MissingPermissions):
+        message = "❌ คุณไม่มีสิทธิ์ใช้คำสั่งนี้"
+    elif isinstance(error, app_commands.CommandOnCooldown):
+        message = f"⏳ กรุณารอ {error.retry_after:.1f} วินาทีแล้วลองใหม่"
+    else:
+        message = "❌ เกิดข้อผิดพลาดในการทำงานของคำสั่ง"
+        print(f"Application command error: {error}")
+
+    if interaction.response.is_done():
+        await interaction.followup.send(message, ephemeral=True)
+    else:
+        await interaction.response.send_message(message, ephemeral=True)
 
 
 bot.run(TOKEN)
