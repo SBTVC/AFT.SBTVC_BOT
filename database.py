@@ -1,13 +1,29 @@
+import os
 import sqlite3
 from pathlib import Path
 from typing import Any
 
-DB_PATH = Path(__file__).with_name("aft_sbtvc.db")
+
+def _resolve_db_path() -> Path:
+    explicit_path = os.getenv("DATABASE_PATH")
+    if explicit_path:
+        return Path(explicit_path)
+
+    railway_volume = os.getenv("RAILWAY_VOLUME_MOUNT_PATH")
+    if railway_volume:
+        return Path(railway_volume) / "aft_sbtvc.db"
+
+    return Path(__file__).with_name("aft_sbtvc.db")
+
+
+DB_PATH = _resolve_db_path()
+DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 
 def connect() -> sqlite3.Connection:
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, timeout=30)
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON")
     return conn
 
 
