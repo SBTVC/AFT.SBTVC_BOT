@@ -1,0 +1,61 @@
+import os
+
+import discord
+from discord.ext import commands
+from dotenv import load_dotenv
+
+
+load_dotenv()
+
+TOKEN = os.getenv("DISCORD_TOKEN")
+GUILD_ID = os.getenv("DISCORD_GUILD_ID")
+
+if not TOKEN:
+    raise RuntimeError(
+        "ไม่พบ DISCORD_TOKEN กรุณาสร้างไฟล์ .env และกำหนด Token ของบอทก่อน"
+    )
+
+
+class AFTBot(commands.Bot):
+    def __init__(self) -> None:
+        intents = discord.Intents.default()
+        super().__init__(
+            command_prefix="!",
+            intents=intents,
+            help_command=None,
+        )
+
+    async def setup_hook(self) -> None:
+        await self.load_extension("cogs.general")
+        await self.load_extension("cogs.announcements")
+
+        if GUILD_ID:
+            guild = discord.Object(id=int(GUILD_ID))
+            self.tree.copy_global_to(guild=guild)
+            synced = await self.tree.sync(guild=guild)
+            print(f"ซิงก์คำสั่งในเซิร์ฟเวอร์แล้ว {len(synced)} คำสั่ง")
+        else:
+            synced = await self.tree.sync()
+            print(f"ซิงก์คำสั่งแบบ Global แล้ว {len(synced)} คำสั่ง")
+
+
+bot = AFTBot()
+
+
+@bot.event
+async def on_ready() -> None:
+    if bot.user is None:
+        return
+
+    print(f"เข้าสู่ระบบเป็น {bot.user} ({bot.user.id})")
+
+    await bot.change_presence(
+        status=discord.Status.online,
+        activity=discord.Activity(
+            type=discord.ActivityType.watching,
+            name="ดูแลเซิร์ฟเวอร์ AFT.SBTVC",
+        ),
+    )
+
+
+bot.run(TOKEN)
