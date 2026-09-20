@@ -34,10 +34,18 @@ AFT.SBTVC_BOT/
 ├── main.py
 ├── database.py
 ├── requirements.txt
+├── Dockerfile
+├── .dockerignore
+├── railway.json
+├── Procfile
+├── .python-version
 ├── .env.example
 ├── .gitignore
-├── Procfile
+├── DEPLOY.md
 ├── README.md
+├── .github/
+│   └── workflows/
+│       └── python-check.yml
 └── cogs/
     ├── __init__.py
     ├── general.py
@@ -47,90 +55,57 @@ AFT.SBTVC_BOT/
     └── tasks.py
 ```
 
-ฐานข้อมูลใช้ **SQLite** และจะสร้างไฟล์ `aft_sbtvc.db` อัตโนมัติเมื่อบอทเริ่มทำงานครั้งแรก
+ฐานข้อมูลใช้ **SQLite** และสร้างให้อัตโนมัติเมื่อบอทเริ่มทำงานครั้งแรก
 
-## 1. ติดตั้ง Python
+- Local: ใช้ `./aft_sbtvc.db`
+- Railway: ถ้ามี Volume บอทจะตรวจ `RAILWAY_VOLUME_MOUNT_PATH` และเก็บฐานข้อมูลบน Volume อัตโนมัติ
+- สามารถกำหนดเองด้วย `DATABASE_PATH`
 
-แนะนำ Python 3.11 หรือใหม่กว่า
+## รันบนเครื่อง
 
-ตรวจสอบเวอร์ชัน:
+ต้องมี Python 3.12
 
-```bash
-python --version
-```
-
-## 2. Clone Repository
-
-```bash
+```powershell
 git clone https://github.com/SBTVC/AFT.SBTVC_BOT.git
 cd AFT.SBTVC_BOT
-```
 
-## 3. สร้าง Virtual Environment
-
-Windows:
-
-```powershell
 python -m venv .venv
 .venv\Scripts\activate
-```
-
-ติดตั้งแพ็กเกจ:
-
-```powershell
 pip install -r requirements.txt
-```
 
-## 4. ตั้งค่า Environment Variables
-
-คัดลอก `.env.example` เป็น `.env`
-
-Windows PowerShell:
-
-```powershell
 Copy-Item .env.example .env
 ```
 
-จากนั้นแก้ `.env`
+แก้ไฟล์ `.env`
 
 ```env
 DISCORD_TOKEN=ใส่_BOT_TOKEN_ตรงนี้
 DISCORD_GUILD_ID=ใส่_SERVER_ID_AFT_SBTVC_ตรงนี้
 ```
 
-### วิธีหา Server ID
-
-1. Discord → User Settings → Advanced
-2. เปิด **Developer Mode**
-3. คลิกขวาที่เซิร์ฟเวอร์ AFT-SBTVC
-4. เลือก **Copy Server ID**
-
-> ห้ามใส่ Token จริงลงในไฟล์ที่ Commit ขึ้น GitHub  
-> ไฟล์ `.env` ถูกเพิ่มไว้ใน `.gitignore` แล้ว
-
-## 5. รันบอท
+จากนั้น:
 
 ```powershell
 python main.py
 ```
 
-เมื่อสำเร็จ Terminal จะขึ้นข้อความประมาณ:
+## Deploy 24/7
 
-```text
-โหลด cogs.general แล้ว
-โหลด cogs.announcements แล้ว
-โหลด cogs.meetings แล้ว
-โหลด cogs.attendance แล้ว
-โหลด cogs.tasks แล้ว
-ซิงก์คำสั่งในเซิร์ฟเวอร์แล้ว ...
-เข้าสู่ระบบเป็น AFT.SBTVC (...)
-```
+Repo นี้เตรียม **Dockerfile + Railway Config** ไว้แล้ว
 
-จากนั้นบอทควรเปลี่ยนเป็น Online ใน Discord
+อ่านขั้นตอนที่:
+
+- [DEPLOY.md](DEPLOY.md)
+
+สิ่งสำคัญตอน Deploy:
+
+1. ตั้ง `DISCORD_TOKEN` เป็น Secret/Variable บน Hosting
+2. ตั้ง `DISCORD_GUILD_ID`
+3. ถ้าใช้ SQLite ต้องต่อ Persistent Volume เพื่อไม่ให้ข้อมูลหายตอน Redeploy
+4. ไม่ต้องเปิด Public Networking เพราะ Discord Bot เป็น Worker
+5. ใช้ 1 replica เท่านั้นเมื่อใช้ SQLite
 
 ## Discord Bot Permissions ที่แนะนำ
-
-เปิดเฉพาะที่จำเป็น:
 
 - View Channels
 - Send Messages
@@ -150,21 +125,9 @@ python main.py
 - Server Members Intent
 - Message Content Intent
 
-จึงสามารถปิดไว้ทั้งหมดได้
-
-## การเปิดบอท 24/7
-
-ไฟล์ `Procfile` เตรียมคำสั่ง Worker ไว้ให้แล้ว:
-
-```text
-worker: python main.py
-```
-
-เมื่อนำไป Deploy ให้ตั้ง Environment Variables บนผู้ให้บริการ Hosting แทนการอัปโหลดไฟล์ `.env`
-
 ## ความปลอดภัย
 
 - ห้าม Commit Discord Bot Token
 - หาก Token เคยหลุด ให้ Reset Token ใน Discord Developer Portal ทันที
 - อย่าให้ Role ของบอทเป็น Administrator ถ้าไม่จำเป็น
-- Database และไฟล์ Environment ถูก Ignore จาก Git แล้ว
+- `.env` และไฟล์ฐานข้อมูลถูก Ignore จาก Git แล้ว
