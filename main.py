@@ -4,6 +4,8 @@ import discord
 from discord.ext import commands
 from dotenv import load_dotenv
 
+import database
+
 
 load_dotenv()
 
@@ -26,8 +28,19 @@ class AFTBot(commands.Bot):
         )
 
     async def setup_hook(self) -> None:
-        await self.load_extension("cogs.general")
-        await self.load_extension("cogs.announcements")
+        database.init_db()
+
+        extensions = (
+            "cogs.general",
+            "cogs.announcements",
+            "cogs.meetings",
+            "cogs.attendance",
+            "cogs.tasks",
+        )
+
+        for extension in extensions:
+            await self.load_extension(extension)
+            print(f"โหลด {extension} แล้ว")
 
         if GUILD_ID:
             guild = discord.Object(id=int(GUILD_ID))
