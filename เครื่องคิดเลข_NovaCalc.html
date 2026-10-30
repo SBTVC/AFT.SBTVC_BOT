@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <meta name="theme-color" content="#0c1120">
+  <title>NovaCalc — เครื่องคิดเลขอัจฉริยะ</title>
+  <style>
+    :root {
+      font-family: "Segoe UI", "Noto Sans Thai", Tahoma, sans-serif;
+      color-scheme: dark;
+      --page:#0a0e19; --panel:#131a2a; --panel-2:#1b2436; --key:#252f42;
+      --key-hover:#303e55; --border:#303b51; --text:#f6f7fc; --muted:#9caac1;
+      --faint:#6e7e9b; --shadow:0 22px 70px #0005;
+      --accent:#8b8dff; --accent-rgb:139,141,255;
+    }
+    *, *::before, *::after { box-sizing:border-box; }
+    html { min-height:100%; }
+    body { margin:0; min-height:100vh; color:var(--text); background:
+      radial-gradient(circle at 10% 0%, rgba(113,101,230,.15), transparent 35%),
+      radial-gradient(circle at 92% 75%, rgba(44,160,203,.08), transparent 35%),var(--page);
+      transition:background .2s,color .2s;
+    }
+    body[data-theme="light"] {
+      color-scheme:light; --page:#f1f4fa; --panel:#fff; --panel-2:#f6f8fc;
+      --key:#edf1f8; --key-hover:#dfe6f3; --border:#e1e6ef;
+      --text:#18243a; --muted:#5c6b83; --faint:#8a96a9;
+      --shadow:0 18px 50px #26395816;
+    }
+    body[data-mode="math"]{ --accent:#bd96ff; --accent-rgb:189,150,255; }
+    body[data-mode="science"]{ --accent:#3bd5c0; --accent-rgb:59,213,192; }
+    body[data-mode="astronomy"]{ --accent:#f0b95c; --accent-rgb:240,185,92; }
+    body[data-mode="standard"]{ --accent:#8b8dff; --accent-rgb:139,141,255; }
+    body[data-theme="light"][data-mode="standard"]{ --accent:#5b5de2; --accent-rgb:91,93,226; }
+    body[data-theme="light"][data-mode="math"]{ --accent:#8751cf; --accent-rgb:135,81,207; }
+    body[data-theme="light"][data-mode="science"]{ --accent:#008e84; --accent-rgb:0,142,132; }
+    body[data-theme="light"][data-mode="astronomy"]{ --accent:#ac6c13; --accent-rgb:172,108,19; }
+    button {font:inherit; -webkit-tap-highlight-color:transparent;}
+    button:focus-visible {outline:3px solid var(--accent);outline-offset:3px;}
+    .app {width:min(1050px,calc(100% - 36px));margin:0 auto;padding:38px 0 35px;}
+    .topbar{display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:27px;}
+    .identity{display:flex;align-items:center;gap:13px;}
+    .logo{width:49px;height:49px;border-radius:15px;display:grid;place-items:center;
+      background:linear-gradient(145deg,#9395ff,#5758c9);color:white;font-size:23px;font-weight:800;
+      box-shadow:0 10px 22px #7972ef39;letter-spacing:-1px;}
+    .name{font-size:22px;letter-spacing:-.8px;font-weight:800;line-height:1.3;}
+    .subtitle{font-size:12px;color:var(--muted);margin-top:3px;}
+    .top-actions{display:flex;align-items:center;gap:10px;}
+    .key-indicator{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12px;}
+    kbd{padding:3px 7px;border-radius:5px;background:var(--panel-2);border:1px solid var(--border);font:600 11px/1.4 "Segoe UI",sans-serif;color:var(--muted);white-space:nowrap;}
+    .icon-button{display:grid;place-items:center;border:1px solid var(--border);border-radius:11px;
+      width:40px;height:40px;background:var(--panel);color:var(--text);cursor:pointer;transition:.15s;}
+    .icon-button:hover{background:var(--key-hover);}
+    .workspace{display:grid;grid-template-columns:minmax(0,620px) minmax(265px,1fr);gap:20px;align-items:start;}
+    .main-card,.info-card{background:var(--panel);border:1px solid var(--border);box-shadow:var(--shadow);border-radius:22px;}
+    .main-card{padding:24px;min-width:0;}
+    .eyebrow{font-size:11px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--faint);margin-bottom:13px;}
+    .tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin-bottom:21px;}
+    .tab{border:1px solid transparent;border-radius:11px;min-height:43px;padding:7px 5px;
+      background:var(--panel-2);color:var(--muted);font-size:12px;cursor:pointer;
+      font-weight:700;display:flex;gap:5px;justify-content:center;align-items:center;transition:.15s;}
+    .tab:hover{background:var(--key-hover);color:var(--text);}
+    .tab.active{color:var(--accent);background:rgba(var(--accent-rgb),.13);border-color:rgba(var(--accent-rgb),.45);}
+    .tab .symbol{font-size:17px;font-family:Georgia,serif;line-height:1;}
+    .screen{background:linear-gradient(160deg,var(--panel-2),var(--panel));border:1px solid var(--border);
+      border-radius:16px;padding:19px 20px 16px;margin-bottom:14px;min-height:156px;
+      display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;position:relative;}
+    .screen:before{content:"";position:absolute;top:0;right:0;width:180px;height:80px;
+      background:radial-gradient(circle at top right,rgba(var(--accent-rgb),.13),transparent 70%);pointer-events:none;}
+    .screen-top{display:flex;align-items:center;justify-content:space-between;gap:14px;min-width:0;}
+    .screen-label{font-size:12px;color:var(--muted);font-weight:600;white-space:nowrap;}
+    .copy-button{display:inline-flex;align-items:center;gap:6px;background:transparent;border:0;
+      color:var(--muted);padding:4px 0 4px 8px;cursor:pointer;font-size:12px;}
+    .copy-button:hover{color:var(--accent);}
+    .expression{font:500 15px/1.6 "Segoe UI",Consolas,sans-serif;text-align:right;
+      color:var(--muted);white-space:nowrap;overflow-x:auto;scrollbar-width:thin;min-height:24px;
+      direction:ltr;unicode-bidi:plaintext;}
+    .answer-row{display:flex;justify-content:flex-end;align-items:baseline;gap:9px;min-width:0;}
+    .answer{font:700 clamp(32px,5vw,47px)/1.24 "Segoe UI",Tahoma,sans-serif;
+      letter-spacing:-1.8px;text-align:right;white-space:nowrap;overflow-x:auto;scrollbar-width:thin;
+      direction:ltr;unicode-bidi:plaintext;min-width:0;max-width:100%;font-variant-numeric:tabular-nums;}
+    .unit{color:var(--accent);font-weight:700;font-size:13px;flex:none;}
+    .status-row{display:flex;justify-content:space-between;align-items:center;gap:12px;
+      margin-bottom:19px;color:var(--muted);font-size:11px;min-height:22px;}
+    .status-dot{width:6px;height:6px;display:inline-block;background:var(--accent);border-radius:50%;margin-right:5px;vertical-align:middle;}
+    .angle-switch{display:flex;padding:3px;gap:2px;background:var(--panel-2);border-radius:8px;border:1px solid var(--border);}
+    .angle-switch button{border:0;background:transparent;color:var(--muted);padding:4px 9px;border-radius:5px;cursor:pointer;font-size:10px;font-weight:800;}
+    .angle-switch button.active{background:rgba(var(--accent-rgb),.19);color:var(--accent);}
+    .section-heading{display:flex;justify-content:space-between;gap:8px;align-items:center;color:var(--muted);font-size:11px;font-weight:800;letter-spacing:.6px;margin:17px 0 10px;}
+    .function-grid,.key-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;}
+    .function-grid{min-height:55px;}
+    .calc-key{display:flex;align-items:center;justify-content:center;min-height:61px;line-height:1.2;
+      border:1px solid transparent;border-radius:12px;background:var(--key);color:var(--text);
+      font-size:21px;font-weight:650;cursor:pointer;user-select:none;transition:background .12s,transform .08s,border-color .12s;}
+    .calc-key:hover{background:var(--key-hover);border-color:var(--border);}
+    .calc-key:active,.calc-key.pressed{transform:scale(.955);background:rgba(var(--accent-rgb),.23);}
+    .calc-key.function{min-height:49px;background:var(--panel-2);color:var(--accent);font-size:16px;border:1px solid var(--border);}
+    .calc-key.function:hover{background:rgba(var(--accent-rgb),.12);}
+    .calc-key.function.wide{grid-column:span 2;font-size:12px;}
+    .calc-key.operator{background:rgba(var(--accent-rgb),.10);color:var(--accent);font-size:24px;}
+    .calc-key.operator:hover{background:rgba(var(--accent-rgb),.2);}
+    .calc-key.utility{color:var(--muted);font-size:17px;}
+    .calc-key.clear{color:#ff858f;}
+    .calc-key.equals{background:var(--accent);color:#0a1020;font-size:28px;box-shadow:0 8px 20px rgba(var(--accent-rgb),.18);}
+    .calc-key.equals:hover{filter:brightness(1.1);background:var(--accent);}
+    .info-column{display:flex;flex-direction:column;gap:18px;min-width:0;}
+    .info-card{padding:20px;box-shadow:none;}
+    .aside-title{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 15px;}
+    .aside-title h2{font-size:15px;letter-spacing:-.3px;font-weight:750;margin:0;}
+    .text-button{background:none;border:none;cursor:pointer;color:var(--muted);font-weight:650;font-size:11px;padding:4px;}
+    .text-button:hover{color:var(--accent);}
+    .guide-title{font-size:13px;font-weight:800;color:var(--accent);margin:0 0 7px;}
+    .guide-desc{font-size:12px;line-height:1.8;color:var(--muted);margin:0;}
+    .guide-list{padding-left:18px;margin:11px 0 0;color:var(--muted);font-size:12px;line-height:1.85;}
+    .guide-list li{margin:3px 0;}
+    .guide-list strong{color:var(--text);font-weight:650;}
+    .history-list{display:flex;flex-direction:column;gap:8px;max-height:405px;overflow:auto;scrollbar-width:thin;}
+    .history-item{display:flex;flex-direction:column;align-items:stretch;gap:4px;
+      border:1px solid var(--border);background:var(--panel-2);border-radius:10px;
+      padding:12px 13px;color:var(--text);text-align:right;cursor:pointer;transition:.15s;min-width:0;}
+    .history-item:hover{border-color:rgba(var(--accent-rgb),.55);background:rgba(var(--accent-rgb),.07);}
+    .history-expression{font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:ltr;}
+    .history-result{font-size:18px;font-weight:750;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:ltr;}
+    .empty-history{text-align:center;color:var(--muted);border:1px dashed var(--border);border-radius:12px;
+      font-size:12px;padding:27px 14px;line-height:1.8;}
+    .empty-symbol{font-size:24px;opacity:.6;display:block;margin-bottom:4px;}
+    .shortcuts{display:grid;grid-template-columns:1fr auto;gap:11px;align-items:center;color:var(--muted);font-size:12px;}
+    .shortcut-keys{display:flex;gap:3px;flex-wrap:wrap;justify-content:flex-end;}
+    .footer{text-align:center;color:var(--faint);font-size:11px;margin-top:20px;line-height:1.8;}
+    .toast{position:fixed;bottom:22px;left:50%;transform:translate(-50%,20px);
+      background:var(--text);color:var(--page);border-radius:10px;padding:10px 18px;
+      font-weight:700;font-size:12px;opacity:0;pointer-events:none;transition:.2s;z-index:3;box-shadow:var(--shadow);}
+    .toast.visible{opacity:1;transform:translate(-50%,0);}
+    @media(max-width:820px){.app{max-width:610px;padding-top:22px;}.workspace{grid-template-columns:1fr;gap:16px;}
+      .info-column{display:grid;grid-template-columns:1fr 1fr;gap:14px;}.info-column .history-card{grid-column:1 / -1;order:-1;}
+      .history-list{max-height:220px;}}
+    @media(max-width:530px){.app{width:min(100% - 22px,460px);}.topbar{margin-bottom:17px;}.key-indicator{display:none;}
+      .name{font-size:19px;}.logo{width:43px;height:43px;border-radius:12px;}
+      .main-card{padding:15px;border-radius:18px;}.tabs{gap:4px;}.tab{font-size:10.5px;flex-direction:column;min-height:54px;gap:3px;}
+      .tab .symbol{font-size:16px;}.screen{padding:14px 15px;min-height:145px;}
+      .calc-key{min-height:57px;border-radius:10px;}.calc-key.function{min-height:46px;}
+      .function-grid,.key-grid{gap:7px;}.info-column{display:flex;gap:13px;}
+      .info-column .history-card{order:0;}.info-card{border-radius:16px;padding:16px;}
+      .answer{font-size:clamp(28px,8vw,40px);}}
+    @media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;}}
+  </style>
+</head>
+<body data-theme="dark" data-mode="standard">
+  <div class="app">
+    <header class="topbar">
+      <div class="identity">
+        <div class="logo" aria-hidden="true">N.</div>
+        <div><div class="name">NovaCalc <span style="font-size:12px;font-weight:700;color:var(--faint);letter-spacing:0">/ PRO</span></div>
+          <div class="subtitle">เครื่องคิดเลขอเนกประสงค์ · ใช้งานได้ออฟไลน์</div></div>
+      </div>
+      <div class="top-actions">
+        <div class="key-indicator"><kbd>NUM</kbd><span>รองรับแป้นตัวเลข</span></div>
+        <button id="theme-toggle" type="button" class="icon-button" aria-label="เปลี่ยนธีมสว่างหรือมืด" title="เปลี่ยนธีม (สว่าง/มืด)">☀</button>
+      </div>
+    </header>
+    <main class="workspace">
+      <section class="main-card" aria-label="เครื่องคิดเลข">
+        <div class="eyebrow">CALCULATOR MODE</div>
+        <div class="tabs" id="mode-tabs" role="group" aria-label="เลือกโหมดเครื่องคิดเลข">
+          <button class="tab active" data-mode="standard" aria-pressed="true"><span class="symbol">⊞</span>ทั่วไป</button>
+          <button class="tab" data-mode="math" aria-pressed="false"><span class="symbol">∑</span>คณิตศาสตร์</button>
+          <button class="tab" data-mode="science" aria-pressed="false"><span class="symbol">⚗</span>วิทยาศาสตร์</button>
+          <button class="tab" data-mode="astronomy" aria-pressed="false"><span class="symbol">✦</span>ดาราศาสตร์</button>
+        </div>
+        <div class="screen" aria-label="หน้าจอคำนวณ">
+          <div class="screen-top"><span class="screen-label">นิพจน์ / Expression</span>
+            <button type="button" id="copy-result" class="copy-button" title="คัดลอกผลลัพธ์" aria-label="คัดลอกผลลัพธ์"><span aria-hidden="true">⧉</span> คัดลอก</button></div>
+          <div id="expression" class="expression" aria-label="นิพจน์ปัจจุบัน">0</div>
+          <div class="answer-row"><div id="answer" class="answer" aria-live="polite" aria-label="ผลการคำนวณ">0</div>
+            <span id="answer-unit" class="unit" hidden></span></div>
+        </div>
+        <div class="status-row">
+          <div id="calc-status"><span class="status-dot"></span> พร้อมคำนวณ</div>
+          <div class="angle-switch" id="angle-switch" role="group" aria-label="หน่วยมุมสำหรับ sin cos tan">
+            <button class="active" type="button" data-angle="DEG" aria-pressed="true">DEG</button>
+            <button type="button" data-angle="RAD" aria-pressed="false">RAD</button>
+          </div>
+        </div>
+        <div class="section-heading"><span>ฟังก์ชันเสริม</span><span id="function-caption">ใช้ได้ในโหมดทั่วไป</span></div>
+        <div class="function-grid" id="function-grid" aria-label="ฟังก์ชันเพิ่มเติม"></div>
+        <div class="section-heading"><span>แป้นคำนวณ</span><span>กดปุ่มหรือใช้คีย์บอร์ด</span></div>
+        <div class="key-grid" id="key-grid" aria-label="ปุ่มเครื่องคิดเลข">
+          <button class="calc-key utility clear" data-action="clear" title="ล้างทั้งหมด (Esc)">AC</button>
+          <button class="calc-key utility" data-action="sign" title="สลับเครื่องหมาย">±</button>
+          <button class="calc-key utility" data-value="%" title="เปอร์เซ็นต์ (%)">%</button>
+          <button class="calc-key operator" data-value="/" title="หาร (/)">÷</button>
+          <button class="calc-key" data-value="7">7</button><button class="calc-key" data-value="8">8</button>
+          <button class="calc-key" data-value="9">9</button><button class="calc-key operator" data-value="*" title="คูณ (*)">×</button>
+          <button class="calc-key" data-value="4">4</button><button class="calc-key" data-value="5">5</button>
+          <button class="calc-key" data-value="6">6</button><button class="calc-key operator" data-value="-">−</button>
+          <button class="calc-key" data-value="1">1</button><button class="calc-key" data-value="2">2</button>
+          <button class="calc-key" data-value="3">3</button><button class="calc-key operator" data-value="+">+</button>
+          <button class="calc-key utility" data-action="backspace" title="ลบตัวท้าย (Backspace)" aria-label="ลบหนึ่งตัว">⌫</button>
+          <button class="calc-key" data-value="0">0</button><button class="calc-key" data-value=".">.</button>
+          <button class="calc-key equals" data-action="equals" title="คำนวณ (Enter)">=</button>
+        </div>
+      </section>
+      <aside class="info-column">
+        <section class="info-card history-card" aria-label="ประวัติการคำนวณ">
+          <div class="aside-title"><h2>◷ ประวัติการคำนวณ</h2><button type="button" id="clear-history" class="text-button" title="ลบประวัติทั้งหมด">ล้างประวัติ</button></div>
+          <div class="history-list" id="history-list"><div class="empty-history"><span class="empty-symbol">◷</span>ยังไม่มีประวัติ<br>ผลลัพธ์ที่คำนวณจะแสดงที่นี่</div></div>
+        </section>
+        <section class="info-card" aria-label="คำอธิบายฟังก์ชัน">
+          <div class="aside-title"><h2>✧ คู่มือการใช้งาน</h2></div>
+          <div class="guide-title" id="guide-title">โหมดทั่วไป</div>
+          <p class="guide-desc" id="guide-desc">บวก ลบ คูณ หาร และคำนวณเปอร์เซ็นต์</p>
+          <ul class="guide-list" id="guide-list"></ul>
+        </section>
+        <section class="info-card" aria-label="ปุ่มลัดคีย์บอร์ด">
+          <div class="aside-title"><h2>⌨ ปุ่มลัดคีย์บอร์ด</h2></div>
+          <div class="shortcuts">
+            <span>ตัวเลขและตัวดำเนินการ</span><span class="shortcut-keys"><kbd>0–9</kbd><kbd>+ − × ÷</kbd></span>
+            <span>คำนวณผลลัพธ์</span><span class="shortcut-keys"><kbd>Enter</kbd><kbd>=</kbd></span>
+            <span>ลบตัวเลขล่าสุด</span><span class="shortcut-keys"><kbd>Backspace</kbd></span>
+            <span>ล้างหน้าจอ</span><span class="shortcut-keys"><kbd>Esc</kbd><kbd>Delete</kbd></span>
+            <span>วงเล็บและยกกำลัง</span><span class="shortcut-keys"><kbd>( )</kbd><kbd>^</kbd></span>
+          </div>
+        </section>
+      </aside>
+    </main>
+    <footer class="footer">NovaCalc · รองรับ Numpad · บันทึกประวัติไว้ในเบราว์เซอร์เครื่องนี้ · ไม่ต้องเชื่อมต่ออินเทอร์เน็ต</footer>
+  </div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script>
+    'use strict';
+    // เครื่องคิดเลขไฟล์เดียว: ใช้ตัวแยกนิพจน์ (parser) แทน eval() เพื่อความปลอดภัย
+    const $ = (id) => document.getElementById(id);
+    const modes = {
+      standard: {
+        title:'โหมดทั่วไป', desc:'เหมาะกับการคำนวณประจำวัน ใช้บวก ลบ คูณ หาร และเปอร์เซ็นต์ได้รวดเร็ว',
+        caption:'พื้นฐาน', buttons:[
+          {label:'(',value:'('},{label:')',value:')'},{label:'x²',action:'square'},{label:'1/x',action:'reciprocal'}
+        ], notes:['<strong>%</strong> เช่น 200 + 10% = 220','<strong>x²</strong> ยกกำลังสอง และ <strong>1/x</strong> หาส่วนกลับ']
+      },
+      math: {
+        title:'โหมดคณิตศาสตร์', desc:'คำนวณรากที่สอง เลขยกกำลัง ตรีโกณมิติ และค่าคงที่ π',
+        caption:'ตรีโกณมิติ · ยกกำลัง', buttons:[
+          {label:'√x',value:'sqrt('},{label:'x²',action:'square'},{label:'xʸ',value:'^'},{label:'π',value:'pi'},
+          {label:'sin',value:'sin('},{label:'cos',value:'cos('},{label:'tan',value:'tan('},{label:'|x|',value:'abs('}
+        ], notes:['<strong>sin, cos, tan</strong> ใช้มุม DEG หรือ RAD ตามที่เลือก','<strong>√x</strong> รากที่สอง, <strong>xʸ</strong> ยกกำลัง','<strong>π</strong> มีค่าประมาณ 3.14159265','พิมพ์ sin(30 แล้วกด = ได้ ระบบเติมวงเล็บปิดให้อัตโนมัติ']
+      },
+      science: {
+        title:'โหมดวิทยาศาสตร์', desc:'เหมาะกับการคำนวณทางวิทยาศาสตร์ ทั้งลอการิทึม ค่าคงที่ และเลขยกกำลัง',
+        caption:'ค่าคงที่ · ลอการิทึม', buttons:[
+          {label:'log',value:'log('},{label:'ln',value:'ln('},{label:'√x',value:'sqrt('},{label:'xʸ',value:'^'},
+          {label:'e',value:'e'},{label:'c',value:'c'},{label:'h',value:'h'},{label:'π',value:'pi'}
+        ], notes:['<strong>log</strong> ลอการิทึมฐาน 10, <strong>ln</strong> ฐาน e','<strong>c</strong> ความเร็วแสง = 299,792,458 m/s','<strong>h</strong> ค่าคงตัวของพลังค์ = 6.62607015 × 10⁻³⁴ J·s','<strong>e</strong> ค่าคงที่ออยเลอร์ ≈ 2.71828']
+      },
+      astronomy: {
+        title:'โหมดดาราศาสตร์', desc:'คำนวณระยะทางในอวกาศและเปรียบเทียบมวลกับน้ำหนักที่รู้สึกได้บนดาวอังคาร',
+        caption:'ดวงดาว · ระยะทาง', buttons:[
+          {label:'ปีแสง → กม.',action:'lightyears',wide:true},
+          {label:'น้ำหนักบนดาวอังคาร',action:'mars',wide:true},
+          {label:'1 AU',value:'AU'},{label:'c',value:'c'},{label:'π',value:'pi'},{label:'xʸ',value:'^'}
+        ], notes:['<strong>ปีแสง → กม.</strong> พิมพ์จำนวนปีแสง แล้วกดแปลงเป็นกิโลเมตร','<strong>1 AU</strong> = 149,597,870.7 กม.','<strong>บนดาวอังคาร</strong> พิมพ์น้ำหนักบนโลกที่ชั่งได้ (กก.) แล้วกดเพื่อเทียบแรงโน้มถ่วงประมาณ 38%','มวลยังเท่าเดิม แต่แรงน้ำหนักบนดาวอังคารต่างจากโลก']
+      }
+    };
+
+    const state = {
+      mode:'standard', angle:'DEG', expression:'0', completedExpression:null,
+      justEvaluated:false, unit:'', error:'', history:[]
+    };
+    const storageKey = 'novacalc-history-v1';
+    const themeKey = 'novacalc-theme-v1';
+    let toastTimeout;
+
+    function loadPreferences(){
+      try {
+        const saved = JSON.parse(localStorage.getItem(storageKey) || '[]');
+        if (Array.isArray(saved)) state.history = saved.filter(x=>x && typeof x.result==='string' && typeof x.expression==='string').slice(0,30);
+        const theme = localStorage.getItem(themeKey);
+        if (theme==='light' || theme==='dark') document.body.dataset.theme=theme;
+      } catch(_) { /* โหมดส่วนตัวอาจปิด localStorage: ยังใช้เครื่องคิดเลขได้ตามปกติ */ }
+    }
+    function persistHistory(){try{localStorage.setItem(storageKey,JSON.stringify(state.history));}catch(_) {}}
+    function persistTheme(){try{localStorage.setItem(themeKey,document.body.dataset.theme);}catch(_) {}}
+
+    // Tokenizer + recursive-descent parser; รองรับ ^, %, วงเล็บ และฟังก์ชันคณิตศาสตร์
+    function tokenize(source){
+      const tokens=[]; let i=0;
+      while(i<source.length){
+        const s=source.slice(i);
+        if (/^\s/.test(s)){i++;continue;}
+        const number=s.match(/^(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?/);
+        if(number){tokens.push({kind:'number',value:Number(number[0])});i+=number[0].length;continue;}
+        const name=s.match(/^[a-zA-Z]+/);
+        if(name){tokens.push({kind:'name',value:name[0]});i+=name[0].length;continue;}
+        const ch=source[i];
+        if('+-*/^%()'.includes(ch)){tokens.push({kind:ch});i++;continue;}
+        throw Error('มีสัญลักษณ์ที่ไม่รองรับ');
+      }
+      return tokens;
+    }
+    function parse(source){
+      const src=source.trim();
+      if(!src) throw Error('กรุณาใส่ตัวเลข');
+      let depth=0;
+      for(const ch of src){if(ch==='(')depth++;if(ch===')')depth--;if(depth<0)throw Error('วงเล็บไม่ถูกต้อง');}
+      const tokens=tokenize(src + ')'.repeat(depth)); let i=0;
+      const peek=()=>tokens[i]?.kind;
+      const eat=(kind)=>{if(peek()!==kind)throw Error('นิพจน์ยังไม่สมบูรณ์');return tokens[i++];};
+      function additive(){let left=multiply();while(peek()==='+'||peek()==='-'){const op=tokens[i++].kind;left={type:'binary',op,left,right:multiply()};}return left;}
+      function multiply(){let left=unary();while(true){
+        if(peek()==='*'||peek()==='/'){const op=tokens[i++].kind;left={type:'binary',op,left,right:unary()};}
+        else if(peek()==='('||peek()==='name'||peek()==='number'){left={type:'binary',op:'*',left,right:unary()};} // เช่น 2π, 2(3+4)
+        else break;
+      }return left;}
+      function unary(){if(peek()==='+'||peek()==='-'){const op=tokens[i++].kind;return {type:'unary',op,arg:unary()};}return power();}
+      function power(){const left=postfix();if(peek()==='^'){i++;return {type:'binary',op:'^',left,right:unary()};}return left;}
+      function postfix(){let value=primary();while(peek()==='%'){i++;value={type:'percent',arg:value};}return value;}
+      function primary(){
+        if(peek()==='number')return {type:'number',value:tokens[i++].value};
+        if(peek()==='name'){
+          const name=tokens[i++].value;
+          if(['pi','e','c','h','AU'].includes(name))return {type:'constant',name};
+          if(['sin','cos','tan','sqrt','log','ln','abs'].includes(name)){
+            eat('(');const arg=additive();eat(')');return {type:'function',name,arg};
+          }
+          throw Error('ไม่รู้จักฟังก์ชัน '+name);
+        }
+        if(peek()==='('){i++;const child=additive();eat(')');return child;}
+        throw Error('นิพจน์ยังไม่สมบูรณ์');
+      }
+      const tree=additive();if(i!==tokens.length)throw Error('นิพจน์ไม่ถูกต้อง');return tree;
+    }
+    function evaluateTree(node){
+      let result;
+      switch(node.type){
+        case 'number':result=node.value;break;
+        case 'constant':result={pi:Math.PI,e:Math.E,c:299792458,h:6.62607015e-34,AU:149597870.7}[node.name];break;
+        case 'unary':result=(node.op==='-'?-1:1)*evaluateTree(node.arg);break;
+        case 'percent':result=evaluateTree(node.arg)/100;break;
+        case 'binary':{
+          const a=evaluateTree(node.left), b=evaluateTree(node.right);
+          switch(node.op){
+            case '+':result=a+(node.right.type==='percent'?a*b:b);break;
+            case '-':result=a-(node.right.type==='percent'?a*b:b);break;
+            case '*':result=a*b;break;
+            case '/':result=a/b;break;
+            case '^':result=Math.pow(a,b);break;
+          }break;
+        }
+        case 'function':{
+          const x=evaluateTree(node.arg);
+          const theta=state.angle==='DEG'?x*Math.PI/180:x;
+          switch(node.name){
+            case 'sin':result=Math.sin(theta);break;
+            case 'cos':result=Math.cos(theta);break;
+            case 'tan':if(Math.abs(Math.cos(theta))<1e-13)throw Error('tan ไม่กำหนดที่มุมนี้');result=Math.tan(theta);break;
+            case 'sqrt':result=Math.sqrt(x);break;
+            case 'log':result=Math.log10(x);break;
+            case 'ln':result=Math.log(x);break;
+            case 'abs':result=Math.abs(x);break;
+          }
+          if(['sin','cos','tan'].includes(node.name) && Math.abs(result)<1e-13)result=0;
+          break;
+        }
+        default:throw Error('ไม่สามารถคำนวณได้');
+      }
+      if(!Number.isFinite(result))throw Error('ผลลัพธ์ไม่อยู่ในช่วงที่คำนวณได้');
+      return result;
+    }
+    function evaluate(expr){return evaluateTree(parse(expr));}
+    function numberString(num){
+      if(!Number.isFinite(num))throw Error('ผลลัพธ์ไม่ถูกต้อง');
+      // ปรับจุดทศนิยมที่เกิดจาก floating point เช่น 0.1+0.2
+      const n=Number(num.toPrecision(13));
+      return Object.is(n,-0)?'0':String(n);
+    }
+    function prettyExpression(raw){
+      return String(raw).replace(/sqrt\(/g,'√(').replace(/pi\b/g,'π')
+        .replace(/\*/g,'×').replace(/\//g,'÷').replace(/\^/g,'^');
+    }
+    function formatNumber(raw){
+      const n=Number(raw);
+      if(!Number.isFinite(n))return String(raw);
+      if(n===0)return '0';
+      const abs=Math.abs(n);
+      if(abs>=1e15||abs<1e-6){return n.toExponential(6).replace(/e\+?/,'e');}
+      return new Intl.NumberFormat('en-US',{maximumFractionDigits:12}).format(n);
+    }
+    function setStatus(message, isError=false){
+      $('calc-status').textContent='';
+      const dot=document.createElement('span');dot.className='status-dot';
+      if(isError)dot.style.background='#fb7584';
+      $('calc-status').append(dot,document.createTextNode(' '+message));
+    }
+    function render(){
+      const expression=state.justEvaluated && state.completedExpression!==null ? state.completedExpression + ' =' : state.expression;
+      $('expression').textContent=prettyExpression(expression);
+      let result=null;
+      try{result=numberString(evaluate(state.expression));}catch(_){}
+      $('answer').textContent=state.error?'Error':result===null?'—':formatNumber(result);
+      $('answer-unit').textContent=state.unit;
+      $('answer-unit').hidden=!state.unit;
+      if(state.error)setStatus(state.error,true);
+      else if(result===null)setStatus('พิมพ์นิพจน์ให้สมบูรณ์');
+      else setStatus('พร้อมคำนวณ');
+      $('copy-result').disabled=result===null;
+      // รักษาเลขท้ายของนิพจน์ไว้เมื่อยาวกว่าหน้าจอ
+      $('expression').scrollLeft=$('expression').scrollWidth;
+    }
+    function resetTransient(){state.error='';state.unit='';state.completedExpression=null;}
+    function isOperator(ch){return '+-*/^'.includes(ch);}
+    function endsOperand(expr){return /[\d)%]$/.test(expr)||/(?:pi|e|c|h|AU)$/.test(expr);}
+    function append(raw){
+      raw=String(raw);
+      const digit=/^\d$/.test(raw);
+      if(state.justEvaluated){
+        if(digit||raw==='.'||raw==='('||/^[a-z]/i.test(raw)){state.expression='0';}
+        state.justEvaluated=false;
+      }
+      resetTransient();
+      let expr=state.expression;
+      if(digit){
+        if(expr==='0')expr=raw;
+        else if(/(?:pi|e|c|h|AU|\)|%)$/.test(expr))expr+='*'+raw;
+        else expr+=raw;
+      }else if(raw==='.'){
+        const last=expr.match(/(?:\d+\.?\d*|\.\d+)$/)?.[0];
+        if(last?.includes('.'))return;
+        if(expr==='0')expr='0.';
+        else if(endsOperand(expr)&&!last)expr+='*0.';
+        else if(isOperator(expr.slice(-1))||expr.endsWith('('))expr+='0.';
+        else expr+='.';
+      }else if(isOperator(raw)){
+        if(isOperator(expr.slice(-1))){
+          if(raw==='-' && expr.slice(-1)!=='-')expr+='-';
+          else if(expr.slice(-1)==='-' && expr.length>1 && isOperator(expr.slice(-2,-1)))expr=expr.slice(0,-2)+raw;
+          else expr=expr.slice(0,-1)+raw;
+        }else if(expr.endsWith('(')){
+          if(raw==='-')expr+='-';
+        }else expr+=raw;
+      }else if(raw==='%'){
+        if(endsOperand(expr) && !expr.endsWith('%'))expr+='%';
+      }else if(raw==='('){
+        if(expr==='0')expr='(';
+        else expr+=(endsOperand(expr)?'*(':'(');
+      }else if(raw===')'){
+        const left=(expr.match(/\(/g)||[]).length;
+        const right=(expr.match(/\)/g)||[]).length;
+        if(left>right&&endsOperand(expr))expr+=')';
+      }else if(/^(?:pi|e|c|h|AU|sin\(|cos\(|tan\(|sqrt\(|log\(|ln\(|abs\()$/.test(raw)){
+        if(expr==='0')expr=raw;
+        else expr+=(endsOperand(expr)?'*':'')+raw;
+      }
+      state.expression=expr;
+      render();
+    }
+    function clearAll(){state.expression='0';state.justEvaluated=false;resetTransient();render();}
+    function backspace(){
+      if(state.justEvaluated){state.justEvaluated=false;resetTransient();}
+      else resetTransient();
+      state.expression=state.expression.length<=1?'0':state.expression.slice(0,-1);
+      render();
+    }
+    function toggleSign(){
+      try{
+        state.expression=numberString(-evaluate(state.expression));
+        state.justEvaluated=false;resetTransient();render();
+      }catch(_){state.error='กรุณาใส่นิพจน์ให้สมบูรณ์';render();}
+    }
+    function addHistory(expression,result,unit=''){
+      state.history.unshift({expression,result,unit,mode:state.mode,at:Date.now()});
+      state.history=state.history.slice(0,30);persistHistory();renderHistory();
+    }
+    function commitResult(expression,value,unit=''){
+      const str=numberString(value);
+      addHistory(expression,str,unit);
+      state.expression=str;state.completedExpression=expression;
+      state.justEvaluated=true;state.unit=unit;state.error='';render();
+    }
+    function calculate(){
+      try{const expr=state.expression;commitResult(expr,evaluate(expr));}
+      catch(e){state.error=e.message||'คำนวณไม่ได้';state.justEvaluated=false;render();}
+    }
+    function square(){
+      if(state.justEvaluated){state.justEvaluated=false;resetTransient();}
+      if(endsOperand(state.expression)){
+        // ใส่วงเล็บครอบนิพจน์เดิมเพื่อให้ (2+3)² = 25
+        state.expression='('+state.expression+')^2';resetTransient();render();
+      }
+    }
+    function reciprocal(){
+      if(state.justEvaluated){state.justEvaluated=false;resetTransient();}
+      try{evaluate(state.expression);state.expression='1/('+state.expression+')';resetTransient();render();}
+      catch(_){state.error='ใส่ค่าที่ต้องการหาส่วนกลับก่อน';render();}
+    }
+    function convertLightyears(){
+      try{const expr=state.expression;const value=evaluate(expr);commitResult(prettyExpression(expr)+' ปีแสง → กม.',value*9460730472580,'กม.');}
+      catch(e){state.error=e.message||'ใส่จำนวนปีแสงก่อน';render();}
+    }
+    function convertMars(){
+      try{const expr=state.expression;const value=evaluate(expr);
+        if(value<0)throw Error('น้ำหนักต้องไม่ติดลบ');
+        commitResult(prettyExpression(expr)+' กก. บนโลก → ดาวอังคาร',value*0.38,'กก.');
+      }catch(e){state.error=e.message||'ใส่น้ำหนักบนโลกก่อน';render();}
+    }
+    function perform(action){
+      switch(action){case 'clear':clearAll();break;case 'backspace':backspace();break;
+        case 'equals':calculate();break;case 'sign':toggleSign();break;
+        case 'square':square();break;case 'reciprocal':reciprocal();break;
+        case 'lightyears':convertLightyears();break;case 'mars':convertMars();break;}
+    }
+    function renderFunctions(){
+      const grid=$('function-grid');grid.replaceChildren();
+      for(const b of modes[state.mode].buttons){
+        const button=document.createElement('button');button.type='button';
+        button.className='calc-key function'+(b.wide?' wide':'');
+        button.textContent=b.label;
+        if(b.value!==undefined)button.dataset.value=b.value;
+        if(b.action)button.dataset.action=b.action;
+        button.title=b.label;grid.append(button);
+      }
+      $('function-caption').textContent=modes[state.mode].caption;
+      $('guide-title').textContent=modes[state.mode].title;
+      $('guide-desc').textContent=modes[state.mode].desc;
+      $('guide-list').innerHTML=modes[state.mode].notes.map(note=>'<li>'+note+'</li>').join('');
+    }
+    function setMode(mode){
+      if(!modes[mode])return;
+      state.mode=mode;document.body.dataset.mode=mode;
+      document.querySelectorAll('.tab').forEach(tab=>{
+        const active=tab.dataset.mode===mode;tab.classList.toggle('active',active);tab.setAttribute('aria-pressed',String(active));
+      });
+      renderFunctions();render();
+    }
+    function setAngle(angle){
+      if(angle!=='DEG'&&angle!=='RAD')return;
+      state.angle=angle;
+      document.querySelectorAll('[data-angle]').forEach(button=>{
+        const active=button.dataset.angle===angle;button.classList.toggle('active',active);button.setAttribute('aria-pressed',String(active));
+      });render();
+    }
+    function renderHistory(){
+      const list=$('history-list');list.replaceChildren();
+      if(!state.history.length){
+        const empty=document.createElement('div');empty.className='empty-history';
+        empty.innerHTML='<span class="empty-symbol">◷</span>ยังไม่มีประวัติ<br>ผลลัพธ์ที่คำนวณจะแสดงที่นี่';
+        list.append(empty);return;
+      }
+      state.history.forEach((item,i)=>{
+        const b=document.createElement('button');b.type='button';b.className='history-item';b.dataset.index=String(i);
+        const expr=document.createElement('span');expr.className='history-expression';expr.textContent=prettyExpression(item.expression);
+        const result=document.createElement('span');result.className='history-result';result.textContent=formatNumber(item.result)+(item.unit?' '+item.unit:'');
+        b.append(expr,result);b.title='กดเพื่อนำผลลัพธ์กลับมาคำนวณ';list.append(b);
+      });
+    }
+    function restoreHistory(index){
+      const item=state.history[index];if(!item)return;
+      state.expression=item.result;state.completedExpression=item.expression;
+      state.justEvaluated=true;state.unit=item.unit||'';state.error='';
+      render();
+    }
+    function toast(message){
+      const t=$('toast');t.textContent=message;t.classList.add('visible');
+      clearTimeout(toastTimeout);toastTimeout=setTimeout(()=>t.classList.remove('visible'),1800);
+    }
+    async function copyResult(){
+      let result;
+      try{result=numberString(evaluate(state.expression));}catch(_){return;}
+      try{
+        if(navigator.clipboard?.writeText)await navigator.clipboard.writeText(result);
+        else{
+          const temp=document.createElement('textarea');temp.value=result;temp.style.position='fixed';temp.style.opacity='0';
+          document.body.append(temp);temp.select();const ok=document.execCommand('copy');temp.remove();if(!ok)throw Error('copy failed');
+        }
+        toast('คัดลอกผลลัพธ์แล้ว');
+      }catch(_){toast('ไม่สามารถคัดลอกได้ในเบราว์เซอร์นี้');}
+    }
+    document.addEventListener('click',(event)=>{
+      const mode=event.target.closest('[data-mode].tab');if(mode){setMode(mode.dataset.mode);return;}
+      const angle=event.target.closest('[data-angle]');if(angle){setAngle(angle.dataset.angle);return;}
+      const history=event.target.closest('.history-item');if(history){restoreHistory(Number(history.dataset.index));return;}
+      const button=event.target.closest('.calc-key');if(button){
+        if(button.dataset.value!==undefined)append(button.dataset.value);
+        else if(button.dataset.action)perform(button.dataset.action);
+      }
+    });
+    $('clear-history').addEventListener('click',()=>{state.history=[];persistHistory();renderHistory();toast('ล้างประวัติแล้ว');});
+    $('theme-toggle').addEventListener('click',()=>{
+      document.body.dataset.theme=document.body.dataset.theme==='dark'?'light':'dark';persistTheme();updateThemeButton();
+    });
+    $('copy-result').addEventListener('click',copyResult);
+    function updateThemeButton(){
+      const light=document.body.dataset.theme==='light';
+      $('theme-toggle').textContent=light?'☾':'☀';
+      $('theme-toggle').title=light?'เปลี่ยนเป็นธีมมืด':'เปลี่ยนเป็นธีมสว่าง';
+    }
+    document.addEventListener('keydown',(event)=>{
+      if(event.ctrlKey||event.metaKey||event.altKey)return;
+      if(event.target.closest('input, textarea, select, [contenteditable="true"]'))return;
+      let key=event.key,action=null;
+      // NumpadDecimal บางระบบคืนค่าเป็น Delete หรือ , จึงตรวจ physical key ด้วย
+      const numpadDigit=event.code.match(/^Numpad([0-9])$/);
+      if(numpadDigit)key=numpadDigit[1];
+      else if(event.code==='NumpadDecimal')key='.';
+      else if(event.code==='NumpadAdd')key='+';
+      else if(event.code==='NumpadSubtract')key='-';
+      else if(event.code==='NumpadMultiply')key='*';
+      else if(event.code==='NumpadDivide')key='/';
+      if(/^\d$/.test(key)||['+','-','*','/','.','(',')','%','^'].includes(key))action={type:'append',value:key};
+      else if(key==='Enter'||key==='=')action={type:'perform',value:'equals'};
+      else if(key==='Backspace')action={type:'perform',value:'backspace'};
+      else if(key==='Escape'||key==='Delete')action={type:'perform',value:'clear'};
+      if(!action)return;
+      event.preventDefault();
+      if(action.type==='append')append(action.value);else perform(action.value);
+      // ให้เห็นการตอบสนองเวลาพิมพ์ Numpad
+      const selector=action.type==='append'?'[data-value="'+CSS.escape(action.value)+'"]':'[data-action="'+action.value+'"]';
+      const btn=$('key-grid').querySelector(selector)||$('function-grid').querySelector(selector);
+      if(btn){btn.classList.add('pressed');setTimeout(()=>btn.classList.remove('pressed'),95);}
+    });
+    loadPreferences();updateThemeButton();setMode('standard');renderHistory();
+  </script>
+</body>
+</html>
